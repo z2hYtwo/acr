@@ -1,0 +1,32 @@
+server:
+  address: 127.0.0.1
+  port: ${BACKEND_PORT:8080}
+spring:
+  application:
+    name: ai-comic-studio
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:${DB_PORT:5432}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    hikari:
+      connection-timeout: 5000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+comic:
+  internal-token: ${AI_ENGINE_TOKEN}
+  ai-engine-base-url: ${AI_ENGINE_BASE_URL:http://127.0.0.1:8000}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

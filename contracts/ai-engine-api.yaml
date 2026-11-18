@@ -1,0 +1,113 @@
+openapi: 3.0.3
+info:
+  title: AI Comic Studio Internal AI API
+  version: 0.1.0
+  description: P0 implements health only. Execution schemas are reserved for P2.
+servers:
+  - url: http://127.0.0.1:8000
+paths:
+  /internal/v1/health:
+    get:
+      operationId: aiHealth
+      security: [{InternalBearer: []}]
+      responses:
+        '200':
+          description: Engine ready without model credentials
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthResponse'}
+        '401':
+          description: Missing or incorrect internal token
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+components:
+  securitySchemes:
+    InternalBearer: {type: http, scheme: bearer}
+  schemas:
+    HealthResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: string, enum: [OK]}
+        message: {type: string, example: ok}
+        data:
+          type: object
+          required: [service, status]
+          properties:
+            service: {type: string, enum: [ai-engine]}
+            status: {type: string, enum: [UP]}
+    ErrorResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: string, enum: [UNAUTHORIZED, FORBIDDEN, VALIDATION_ERROR, NOT_FOUND, INTERNAL_ERROR, SERVICE_UNAVAILABLE]}
+        message: {type: string}
+        data: {type: object, nullable: true}
+    TaskStatus:
+      type: string
+      enum: [PENDING, QUEUED, RUNNING, WAITING, RETRYING, REVIEWING, SUCCEEDED, FAILED, CANCELLED]
+    CreateTaskRequest:
+      type: object
+      required: [projectId, taskType, targetId, inputData, modelConfigId, idempotencyKey]
+      properties:
+        projectId: {type: string, format: uuid}
+        episodeId: {type: string, format: uuid, nullable: true}
+        taskType: {type: string}
+        targetId: {type: string, format: uuid}
+        inputData: {type: object, additionalProperties: true}
+        modelConfigId: {type: string, format: uuid}
+        idempotencyKey: {type: string, minLength: 1, maxLength: 128}
+    GenerationTask:
+      type: object
+      required: [taskId, taskType, status, inputData, createdAt]
+      properties:
+        taskId: {type: string, format: uuid}
+        taskType: {type: string}
+        status: {$ref: '#/components/schemas/TaskStatus'}
+        inputData: {type: object, additionalProperties: true}
+        output: {type: object, nullable: true, additionalProperties: true}
+        createdAt: {type: string, format: date-time}
+        startedAt: {type: string, format: date-time, nullable: true}
+        endedAt: {type: string, format: date-time, nullable: true}
+        error: {type: string, nullable: true}
+    Page:
+      type: object
+      required: [items, total, page, size]
+      properties:
+        items: {type: array, items: {type: object}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 100}
+
+    ExecutionRequest:
+      type: object
+      required: [taskId, attemptId, executionToken, taskType, input, model, traceId]
+      properties:
+        taskId: {type: string, format: uuid}
+        attemptId: {type: string, format: uuid}
+        executionToken: {type: string, minLength: 1}
+        taskType: {type: string}
+        input: {type: object, additionalProperties: true}
+        model: {type: object, additionalProperties: true, description: Protected runtime configuration. Never log credentials.}
+        traceId: {type: string, format: uuid}
+    ExecutionAccepted:
+      type: object
+      required: [executionId, accepted]
+      properties:
+        executionId: {type: string, format: uuid}
+        accepted: {type: boolean, enum: [true]}
+    TaskEvent:
+      type: object
+      required: [eventId, taskId, attemptId, executionToken, sequence, status, progress]
+      properties:
+        eventId: {type: string, format: uuid}
+        taskId: {type: string, format: uuid}
+        attemptId: {type: string, format: uuid}
+        executionToken: {type: string, minLength: 1}
+        sequence: {type: integer, minimum: 0}
+        status: {$ref: '#/components/schemas/TaskStatus'}
+        progress: {type: number, minimum: 0, maximum: 100}
+        output: {type: object, nullable: true, additionalProperties: true}
+        error: {type: object, nullable: true, additionalProperties: true}
+        usage: {type: object, nullable: true, additionalProperties: true}

@@ -1,0 +1,15 @@
+﻿.env
+.env.*
+!.env.example
+.tools/
+.run/
+.worktrees/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/node_modules/
+**/dist/
+**/target/
+**/*.pyc
+storage/*
+!storage/.gitkeep

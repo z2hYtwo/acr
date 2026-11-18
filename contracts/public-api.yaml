@@ -1,0 +1,100 @@
+openapi: 3.0.3
+info:
+  title: AI Comic Studio Public API
+  version: 0.1.0
+  description: P0 health is implemented. Task schemas are a baseline for P1/P2, not available endpoints.
+servers:
+  - url: http://127.0.0.1:8080
+paths:
+  /api/v1/health:
+    get:
+      operationId: publicHealth
+      responses:
+        '200':
+          description: Backend and database ready
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthResponse'}
+        '503':
+          description: Database unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+  /internal/v1/health:
+    get:
+      operationId: internalBackendHealth
+      security: [{InternalBearer: []}]
+      responses:
+        '200':
+          description: Backend ready
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthResponse'}
+        '401':
+          description: Missing or incorrect internal token
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '503':
+          description: Database unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+components:
+  securitySchemes:
+    InternalBearer: {type: http, scheme: bearer}
+  schemas:
+    HealthResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: string, enum: [OK]}
+        message: {type: string, example: ok}
+        data:
+          type: object
+          required: [service, status]
+          properties:
+            service: {type: string, enum: [backend]}
+            status: {type: string, enum: [UP]}
+    ErrorResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: {type: string, enum: [UNAUTHORIZED, FORBIDDEN, VALIDATION_ERROR, NOT_FOUND, INTERNAL_ERROR, SERVICE_UNAVAILABLE]}
+        message: {type: string}
+        data: {type: object, nullable: true}
+    TaskStatus:
+      type: string
+      enum: [PENDING, QUEUED, RUNNING, WAITING, RETRYING, REVIEWING, SUCCEEDED, FAILED, CANCELLED]
+    CreateTaskRequest:
+      type: object
+      required: [projectId, taskType, targetId, inputData, modelConfigId, idempotencyKey]
+      properties:
+        projectId: {type: string, format: uuid}
+        episodeId: {type: string, format: uuid, nullable: true}
+        taskType: {type: string}
+        targetId: {type: string, format: uuid}
+        inputData: {type: object, additionalProperties: true}
+        modelConfigId: {type: string, format: uuid}
+        idempotencyKey: {type: string, minLength: 1, maxLength: 128}
+    GenerationTask:
+      type: object
+      required: [taskId, taskType, status, inputData, createdAt]
+      properties:
+        taskId: {type: string, format: uuid}
+        taskType: {type: string}
+        status: {$ref: '#/components/schemas/TaskStatus'}
+        inputData: {type: object, additionalProperties: true}
+        output: {type: object, nullable: true, additionalProperties: true}
+        createdAt: {type: string, format: date-time}
+        startedAt: {type: string, format: date-time, nullable: true}
+        endedAt: {type: string, format: date-time, nullable: true}
+        error: {type: string, nullable: true}
+    Page:
+      type: object
+      required: [items, total, page, size]
+      properties:
+        items: {type: array, items: {type: object}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 100}
